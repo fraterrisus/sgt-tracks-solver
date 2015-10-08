@@ -3,7 +3,9 @@
 
 #include <sstream>
 #include <string>
+#include <iostream>
 #include <iomanip>
+#include <bitset>
 
 #include "square.h"
 
@@ -19,10 +21,15 @@ private:
   int index_of(int, int);
   Square* square_at(int, int);
 
+  bool solve_full_count();
+  bool solve_forced_spaces();
+
 public:
   Board();
   Board(int, int);
   ~Board();
+
+  void solve();
 
   std::string to_str();
   bool set_square(int, int);

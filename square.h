@@ -1,7 +1,9 @@
 #ifndef _SQUARE_H
 #define _SQUARE_H
 
+#include <iostream>
 #include <string>
+#include <bitset>
 
 #define SOUTH 0x8
 #define WEST 0x4
@@ -36,10 +38,15 @@ public:
   Square();
   ~Square();
   std::string to_str();
+  bool is_solved();
+  bool set_value(std::bitset<4>);
   bool add_value(int);
+  State get_state() { get_edges(); return state; }
+  bool set_state(State);
 
-private:
+  int get_noes();
   int get_edges();
+private:
 };
 
 #endif

@@ -115,6 +115,7 @@ int main(int argc, char **argv) {
     return 1;
   }
   cout << board->to_str() << std::endl;
+  board->solve();
   delete(board);
   return 0;
 }

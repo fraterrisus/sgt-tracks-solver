@@ -52,17 +52,21 @@ Board::Board(int _w, int _h) {
   for (x=0; x<wid; x++) {
     me = square_at(x,0);
     me->gap_n = new Square::Gap;
+    me->gap_n->state = Square::NO;
 
     me = square_at(x,hgt-1);
     me->gap_s = new Square::Gap;
+    me->gap_s->state = Square::NO;
   }
 
   for (y=0; y<hgt; y++) {
     me = square_at(0,y);
     me->gap_w = new Square::Gap;
+    me->gap_w->state = Square::NO;
 
     me = square_at(wid-1,y);
     me->gap_e = new Square::Gap;
+    me->gap_e->state = Square::NO;
   }
 
 }
@@ -96,9 +100,124 @@ std::string Board::to_str() {
 }
 
 bool Board::set_square(int idx, int value) {
-  return squares[idx].add_value(value);
+  return squares[idx].set_value(value);
 }
 
 bool Board::set_square(int x, int y, int value) {
-  return square_at(x,y)->add_value(value);
+  return square_at(x,y)->set_value(value);
+}
+
+/* ---------------------------------------- */
+
+bool Board::solve_forced_spaces() {
+  Square *rp, *sq;
+  bool changes = false;
+
+  std::cout << "solve_forced_spaces()" << std::endl;
+
+  int x=0, y=0;
+  for (rp = squares; rp != 0; rp = rp->s) {
+    x=0;
+    for (sq = rp; sq != 0; sq = sq->e) {
+      if ((sq->get_state() == Square::YES) && (!sq->is_solved())) {
+        std::cout << "  (" << x << "," << y << ") ";
+        std::bitset<4> ys = sq->get_edges();
+        std::bitset<4> ns = sq->get_noes();
+        if ((ns.count() == 2) && (ys.count() != 2)) {
+          ns.flip();
+          std::cout << " set " << ns;
+          sq->set_value(ns);
+          changes = true;
+        }
+        std::cout << std::endl;
+      }
+      x++;
+    }
+    y++;
+  }
+  return changes;
+}
+
+bool Board::solve_full_count() {
+  int i,j;
+  int y,n,m;
+  bool changes = false;
+  Square *sq;
+
+  std::cout << "solve_full_count()" << std::endl;
+
+  for (j=0; j<hgt; j++) {
+    y=0; n=0; m=0;
+    for (sq = square_at(0,j); sq != 0; sq = sq->e) {
+      switch (sq->get_state()) {
+        case Square::YES: y++; break;
+        case Square::NO: n++; break;
+        case Square::UNKN: m++; break;
+      }
+    }
+    std::cout << "  row " << j << " " << row_count[j] << "t " << y << "y" << n << "n" << m << "m" << std::endl;
+    if (m > 0) {
+      if (row_count[j] == y) {
+        std::cout << "  filling in N" << std::endl;
+        for (sq = square_at(0,j); sq != 0; sq = sq->e) {
+          if (sq->get_state() == Square::UNKN) {
+            changes = true;
+            sq->set_state(Square::NO);
+          }
+        }
+      }
+      if ((hgt - row_count[j]) == n) {
+        std::cout << "  filling in Y" << std::endl;
+        for (sq = square_at(0,j); sq != 0; sq = sq->e) {
+          if (sq->get_state() == Square::UNKN) {
+            changes = true;
+            sq->set_state(Square::YES);
+          }
+        }
+      }
+    }
+  }
+
+  for (i=0; i<wid; i++) {
+    y=0; n=0; m=0;
+    for (sq = square_at(i,0); sq != 0; sq = sq->s) {
+      switch (sq->get_state()) {
+        case Square::YES: y++; break;
+        case Square::NO: n++; break;
+        case Square::UNKN: m++; break;
+      }
+    }
+    std::cout << "  col " << i << " " << col_count[i] << "t " << y << "y" << n << "n" << m << "m" << std::endl;
+    if (m > 0) {
+      if (col_count[i] == y) {
+        std::cout << "  filling in N" << std::endl;
+        for (sq = square_at(i,0); sq != 0; sq = sq->s) {
+          if (sq->get_state() == Square::UNKN) {
+            changes = true;
+            sq->set_state(Square::NO);
+          }
+        }
+      }
+      if ((hgt - col_count[i]) == n) {
+        std::cout << "  filling in Y" << std::endl;
+        for (sq = square_at(i,0); sq != 0; sq = sq->s) {
+          if (sq->get_state() == Square::UNKN) {
+            changes = true;
+            sq->set_state(Square::YES);
+          }
+        }
+      }
+    }
+  }
+  return changes;
+}
+
+void Board::solve() {
+  bool changes = true;
+  while (changes) {
+    changes = false;
+    changes = changes || solve_forced_spaces();
+    changes = changes || solve_full_count();
+    std::cout << to_str() << std::endl;
+  }
 }

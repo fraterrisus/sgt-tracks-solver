@@ -1,4 +1,5 @@
 CC=g++
+CXX=g++
 CXXFLAGS=-std=c++11 -g
 
 TARGETS=solver.o board.o square.o
