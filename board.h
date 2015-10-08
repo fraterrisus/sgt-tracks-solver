@@ -6,6 +6,9 @@
 #include <iostream>
 #include <iomanip>
 #include <bitset>
+#include <vector>
+#include <deque>
+#include <iterator>
 
 #include "square.h"
 
@@ -21,8 +24,13 @@ private:
   int index_of(int, int);
   Square* square_at(int, int);
 
+  void inspect_all_squares();
+
   bool solve_full_count();
   bool solve_forced_spaces();
+  bool solve_unreachable_spaces();
+
+  static std::bitset<4> value_to_bitset(int);
 
 public:
   Board();

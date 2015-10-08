@@ -37,15 +37,19 @@ private:
 public:
   Square();
   ~Square();
+
+  static std::string state_to_str(State);
+
   std::string to_str();
   bool is_solved();
   bool set_value(std::bitset<4>);
-  bool add_value(int);
-  State get_state() { get_edges(); return state; }
+  //bool add_value(int);
+  State get_state() { return state; }
   bool set_state(State);
+  bool update_state();
 
-  int get_noes();
-  int get_edges();
+  std::bitset<4> get_noes();
+  std::bitset<4> get_yeses();
 private:
 };
 

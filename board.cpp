@@ -99,12 +99,21 @@ std::string Board::to_str() {
   return rv.str();
 }
 
+std::bitset<4> Board::value_to_bitset(int value) {
+  std::bitset<4> bs;
+  if ((value & 0x8) > 0) { bs[3] = true; }
+  if ((value & 0x4) > 0) { bs[2] = true; }
+  if ((value & 0x2) > 0) { bs[1] = true; }
+  if ((value & 0x1) > 0) { bs[0] = true; }
+  return bs;
+}
+
 bool Board::set_square(int idx, int value) {
-  return squares[idx].set_value(value);
+  return squares[idx].set_value(value_to_bitset(value));
 }
 
 bool Board::set_square(int x, int y, int value) {
-  return square_at(x,y)->set_value(value);
+  return square_at(x,y)->set_value(value_to_bitset(value));
 }
 
 /* ---------------------------------------- */
@@ -119,17 +128,10 @@ bool Board::solve_forced_spaces() {
   for (rp = squares; rp != 0; rp = rp->s) {
     x=0;
     for (sq = rp; sq != 0; sq = sq->e) {
-      if ((sq->get_state() == Square::YES) && (!sq->is_solved())) {
-        std::cout << "  (" << x << "," << y << ") ";
-        std::bitset<4> ys = sq->get_edges();
-        std::bitset<4> ns = sq->get_noes();
-        if ((ns.count() == 2) && (ys.count() != 2)) {
-          ns.flip();
-          std::cout << " set " << ns;
-          sq->set_value(ns);
-          changes = true;
-        }
-        std::cout << std::endl;
+      if (sq->update_state()) {
+        std::cout << "  (" << x << "," << y << ") updated" << std::endl;
+        changes = true;
+        return true;
       }
       x++;
     }
@@ -158,7 +160,7 @@ bool Board::solve_full_count() {
     std::cout << "  row " << j << " " << row_count[j] << "t " << y << "y" << n << "n" << m << "m" << std::endl;
     if (m > 0) {
       if (row_count[j] == y) {
-        std::cout << "  filling in N" << std::endl;
+        std::cout << "    filling in N" << std::endl;
         for (sq = square_at(0,j); sq != 0; sq = sq->e) {
           if (sq->get_state() == Square::UNKN) {
             changes = true;
@@ -167,7 +169,7 @@ bool Board::solve_full_count() {
         }
       }
       if ((hgt - row_count[j]) == n) {
-        std::cout << "  filling in Y" << std::endl;
+        std::cout << "    filling in Y" << std::endl;
         for (sq = square_at(0,j); sq != 0; sq = sq->e) {
           if (sq->get_state() == Square::UNKN) {
             changes = true;
@@ -190,7 +192,7 @@ bool Board::solve_full_count() {
     std::cout << "  col " << i << " " << col_count[i] << "t " << y << "y" << n << "n" << m << "m" << std::endl;
     if (m > 0) {
       if (col_count[i] == y) {
-        std::cout << "  filling in N" << std::endl;
+        std::cout << "    filling in N" << std::endl;
         for (sq = square_at(i,0); sq != 0; sq = sq->s) {
           if (sq->get_state() == Square::UNKN) {
             changes = true;
@@ -199,7 +201,7 @@ bool Board::solve_full_count() {
         }
       }
       if ((hgt - col_count[i]) == n) {
-        std::cout << "  filling in Y" << std::endl;
+        std::cout << "    filling in Y" << std::endl;
         for (sq = square_at(i,0); sq != 0; sq = sq->s) {
           if (sq->get_state() == Square::UNKN) {
             changes = true;
@@ -212,12 +214,138 @@ bool Board::solve_full_count() {
   return changes;
 }
 
+bool Board::solve_unreachable_spaces() {
+  std::vector< Square* > *reachable = new std::vector< Square* >;
+  std::deque< Square* > *worklist   = new std::deque< Square* >;
+  Square *rp, *sq;
+  bool changes = false;
+
+  std::cout << "solve_unreachable_spaces()" << std::endl;
+
+  // add all YES squares to worklist
+  for (rp = squares; rp != 0; rp = rp->s) {
+    for (sq = rp; sq != 0; sq = sq->e) {
+      if (sq->get_state() == Square::YES) {
+        std::cout << "  WL add " << std::hex << sq << std::endl;
+        worklist->push_back(sq);
+      }
+    }
+  }
+
+  while (! worklist->empty()) {
+    Square* neighbors[4];
+    // remove item from worklist
+    sq = worklist->front();
+    worklist->pop_front();
+    std::cout << "  WL pop " << std::hex << sq << std::endl;
+    // add it to reachable list
+    reachable->push_back(sq);
+    neighbors[0] = sq->n;
+    neighbors[1] = sq->e;
+    neighbors[2] = sq->w;
+    neighbors[3] = sq->s;
+    // are any of it's neighbors UNKN and not already on the list?
+    // if so, add them to the worklist
+    for (int i=0; i<4; i++) {
+      sq = neighbors[i];
+      if ((sq != 0) && (sq->get_state() == Square::UNKN)) {
+        bool found = false;
+        for (std::vector< Square* >::iterator it = reachable->begin(); 
+            it != reachable->end(); it++) {
+          if (*it == sq) {
+            std::cout << "  ignore " << std::hex << sq << " already on RE" << std::endl;
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          for (std::deque< Square* >::iterator it = worklist->begin();
+              it != worklist->end(); it++) {
+            if (*it == sq) {
+              std::cout << "  ignore " << std::hex << sq << " already on WL" << std::endl;
+              found = true;
+              break;
+            }
+          }
+        }
+        if (!found) {
+          std::cout << "  WL add " << std::hex << sq << std::endl;
+          worklist->push_back(sq);
+        }
+      }
+    }
+  }
+  // all reachable squares have been found
+
+  // iterate over all UNKN squares, make sure they aren't reachable,
+  // and set them to NO
+  for (rp = squares; rp != 0; rp = rp->s) {
+    for (sq = rp; sq != 0; sq = sq->e) {
+      if (sq->get_state() == Square::UNKN) {
+        std::cout << "  check  " << std::hex << sq;
+        bool found = false;
+        for (std::vector< Square* >::iterator it = reachable->begin(); 
+            it != reachable->end(); it++) {
+          if (*it == sq) {
+            std::cout << std::endl;
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          std::cout << " mark" << std::endl;
+          changes = true;
+          sq->set_state(Square::NO);
+        }
+      }
+    }
+  }
+
+  delete(worklist);
+  delete(reachable);
+  return changes;
+}
+
 void Board::solve() {
   bool changes = true;
   while (changes) {
     changes = false;
+
+    std::cout << to_str();
+    inspect_all_squares();
+    std::cout << std::endl;
+    
     changes = changes || solve_forced_spaces();
     changes = changes || solve_full_count();
-    std::cout << to_str() << std::endl;
+    changes = changes || solve_unreachable_spaces();
+  }
+}
+
+void Board::inspect_all_squares() {
+  Square *rp, *sq;
+  std::cout << "inspect_all_squares()" << std::endl;
+
+  for (rp = squares; rp != 0; rp = rp->s) {
+    for (sq = rp; sq != 0; sq = sq->e) {
+      std::cout << " ";
+      std::cout << "/";
+      std::cout << Square::state_to_str(sq->gap_n->state);
+      std::cout << "\\";
+    }
+    std::cout << std::endl;
+    for (sq = rp; sq != 0; sq = sq->e) {
+      std::cout << " ";
+      std::cout << Square::state_to_str(sq->gap_w->state);
+      std::cout << Square::state_to_str(sq->get_state());
+      std::cout << Square::state_to_str(sq->gap_e->state);
+    }
+    std::cout << std::endl;
+    for (sq = rp; sq != 0; sq = sq->e) {
+      std::cout << " ";
+      std::cout << "\\";
+      std::cout << Square::state_to_str(sq->gap_s->state);
+      std::cout << "/";
+    }
+    std::cout << std::endl;
   }
 }

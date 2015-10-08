@@ -16,6 +16,7 @@ Square::Square() {
  * the same Gaps that I am, then clear their pointers to the Gaps I'm about to
  * delete. */
 Square::~Square() {
+  std::cout << "delete square " << std::hex << this << std::endl;
   if (gap_n != 0) {
     if ((n != 0) && (n->gap_s == gap_n)) { n->gap_s = 0; }
     delete(gap_n); gap_n = 0;
@@ -37,11 +38,19 @@ Square::~Square() {
   }
 }
 
+std::string Square::state_to_str(State st) {
+  switch(st) {
+    case Square::YES:  return "Y";
+    case Square::NO:   return "N";
+    case Square::UNKN: return "U";
+    default:           return "?";
+  }
+}
+
 std::string Square::to_str() {
-  int edges = get_edges();
   if (state == NO) { return "\u00d7"; }
   if (state == UNKN) { return "\u25e6"; }
-  switch(edges) {
+  switch(get_yeses().to_ulong()) {
     case 0: return "\u2022";
     case 1: return "\u2576"; //"\u257a"
     case 2: return "\u2575"; //"\u2579"
@@ -58,6 +67,7 @@ std::string Square::to_str() {
 }
 
 bool Square::is_solved() {
+  update_state();
   if (gap_s->state == Square::UNKN) { return false; }
   if (gap_n->state == Square::UNKN) { return false; }
   if (gap_e->state == Square::UNKN) { return false; }
@@ -67,26 +77,18 @@ bool Square::is_solved() {
 
 /* This method is not additive. 1s will be set to YES and 0s will be set 
  * to NO. */
-/*
-bool Square::set_value(int val) {
-  gap_s->state = ((val & SOUTH) > 0) ? Square::YES : Square::NO;
-  gap_n->state = ((val & NORTH) > 0) ? Square::YES : Square::NO;
-  gap_e->state = ((val & EAST ) > 0) ? Square::YES : Square::NO;
-  gap_w->state = ((val & WEST ) > 0) ? Square::YES : Square::NO;
-  return true;
-}
-*/
-
 bool Square::set_value(std::bitset<4> val) {
   gap_s->state = (val[3]) ? Square::YES : Square::NO;
   gap_w->state = (val[2]) ? Square::YES : Square::NO;
   gap_n->state = (val[1]) ? Square::YES : Square::NO;
   gap_e->state = (val[0]) ? Square::YES : Square::NO;
+  state = (val.count() > 0) ? Square::YES : Square::NO;
   return true;
 }
 
+/*
 bool Square::add_value(int val) {
-  int edges = get_edges();
+  int edges = get_yeses();
   int newedges = edges | val;
   if (edges == newedges) { return true; }
   // Illegal states: 0111 1011 1101 1110 1111
@@ -101,19 +103,52 @@ bool Square::add_value(int val) {
   if ((newedges & WEST ) > 0) { gap_w->state = Square::YES; }
   return true;
 }
+*/
+
+bool Square::update_state() {
+  std::bitset<4> y = get_yeses();
+  std::bitset<4> n = get_noes();
+  bool update = false;
+  if (y.count() > 0) {
+    if (set_state(YES)) { update = true; }
+  }
+  // (Solved) If two edges are YES, then we are YES and the other two edges are NO
+  if ((y.count() == 2) && (n.count() != 2)) {
+    if (set_value(y)) { update = true; }
+  }
+  // (Forced) If we are YES but two edges are NO, then the other two edges must be YES
+  if ((state == YES) && (y.count() != 2) && (n.count() == 2)) {
+    n.flip();
+    if (set_value(n)) { update = true; }
+  }
+  // (Alleys) If three edges are NO, then we are NO and all four edges are NO
+  if (n.count() == 3) {
+    n.reset(); // n.set().flip();
+    if (set_value(n)) { update = true; }
+  }
+  if (n.count() == 4) {
+    if (set_state(NO)) { update = true; }
+  }
+  return update;
+}
 
 bool Square::set_state(State st) {
   switch (st) {
     case YES:
-      state = YES;
-      return true;
+      if (state == YES)
+        return false;
+      else {
+        state = YES;
+        return true;
+      }
     case UNKN:
       return false;
     case NO:
-      if ((gap_s->state == YES) ||
-          (gap_n->state == YES) ||
-          (gap_e->state == YES) ||
-          (gap_w->state == YES)) {
+      if ((state == NO) &&
+          (gap_s->state == NO) &&
+          (gap_n->state == NO) &&
+          (gap_e->state == NO) &&
+          (gap_w->state == NO)) {
         return false;
       } else {
         state = NO;
@@ -128,20 +163,22 @@ bool Square::set_state(State st) {
   return false;
 }
 
-int Square::get_edges() {
-  int edges = 0;
-  if (gap_s->state == YES) { edges += SOUTH; state = YES; }
-  if (gap_w->state == YES) { edges += WEST;  state = YES; }
-  if (gap_n->state == YES) { edges += NORTH; state = YES; }
-  if (gap_e->state == YES) { edges += EAST;  state = YES; }
-  return edges;
+std::bitset<4> Square::get_yeses() {
+  std::bitset<4> yeses;
+  yeses.reset();
+  if (gap_s->state == YES) { yeses.set(3, true); }
+  if (gap_w->state == YES) { yeses.set(2, true); }
+  if (gap_n->state == YES) { yeses.set(1, true); }
+  if (gap_e->state == YES) { yeses.set(0, true); }
+  return yeses;
 }
 
-int Square::get_noes() {
-  int edges = 0;
-  if (gap_s->state == NO) { edges += SOUTH; }
-  if (gap_w->state == NO) { edges += WEST;  }
-  if (gap_n->state == NO) { edges += NORTH; }
-  if (gap_e->state == NO) { edges += EAST;  }
-  return edges;
+std::bitset<4> Square::get_noes() {
+  std::bitset<4> noes;
+  noes.reset();
+  if (gap_s->state == NO) { noes.set(3, true); }
+  if (gap_w->state == NO) { noes.set(2, true); }
+  if (gap_n->state == NO) { noes.set(1, true); }
+  if (gap_e->state == NO) { noes.set(0, true); }
+  return noes;
 }
