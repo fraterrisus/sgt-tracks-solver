@@ -3,6 +3,11 @@
 
 #include <string>
 
+#define SOUTH 0x8
+#define WEST 0x4
+#define NORTH 0x2
+#define EAST 0x1
+
 class Square {
 
 /* classes */
@@ -31,6 +36,10 @@ public:
   Square();
   ~Square();
   std::string to_str();
+  bool add_value(int);
+
+private:
+  int get_edges();
 };
 
 #endif

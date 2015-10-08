@@ -25,6 +25,8 @@ public:
   ~Board();
 
   std::string to_str();
+  bool set_square(int, int);
+  bool set_square(int, int, int);
 };
 
 #endif

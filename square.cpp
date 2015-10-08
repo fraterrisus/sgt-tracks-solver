@@ -37,17 +37,22 @@ Square::~Square() {
   }
 }
 
-std::string Square::to_str() {
+int Square::get_edges() {
   int edges = 0;
-  if (gap_s->state == YES) { edges += 8; state = YES; }
-  if (gap_w->state == YES) { edges += 4; state = YES; }
-  if (gap_n->state == YES) { edges += 2; state = YES; }
-  if (gap_e->state == YES) { edges += 1; state = YES; }
+  if (gap_s->state == YES) { edges += SOUTH; state = YES; }
+  if (gap_w->state == YES) { edges += WEST;  state = YES; }
+  if (gap_n->state == YES) { edges += NORTH; state = YES; }
+  if (gap_e->state == YES) { edges += EAST;  state = YES; }
+  return edges;
+}
+
+std::string Square::to_str() {
+  int edges = get_edges();
   if (state == NO) { return "\u00d7"; }
   if (state == UNKN) { return "\u25e6"; }
   switch(edges) {
     case 0: return "\u2022";
-    case 1: return "\u2574"; //"\u257a"
+    case 1: return "\u2576"; //"\u257a"
     case 2: return "\u2575"; //"\u2579"
     case 3: return "\u2570"; //"\u2517"
     case 4: return "\u2574"; //"\u2578"
@@ -59,4 +64,21 @@ std::string Square::to_str() {
     case 12: return "\u256e"; //"\u2513"
   }
   return "?";
+}
+
+bool Square::add_value(int val) {
+  int edges = get_edges();
+  int newedges = edges | val;
+  if (edges == newedges) { return true; }
+  // Illegal states: 0111 1011 1101 1110 1111
+  if ((newedges == 7) || (newedges == 11) || (newedges == 13) || 
+      (newedges == 14) || (newedges == 15)) {
+    return false;
+  }
+  // This is possibly redundant, but that's okay.
+  if ((newedges & SOUTH) > 0) { gap_s->state = Square::YES; }
+  if ((newedges & NORTH) > 0) { gap_n->state = Square::YES; }
+  if ((newedges & EAST ) > 0) { gap_e->state = Square::YES; }
+  if ((newedges & WEST ) > 0) { gap_w->state = Square::YES; }
+  return true;
 }

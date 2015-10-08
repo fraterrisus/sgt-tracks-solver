@@ -2,6 +2,7 @@
 #include <iomanip>
 #include <string>
 #include <chrono>
+#include <stdlib.h>
 
 #include "board.h"
 
@@ -28,8 +29,32 @@ Board* read_game() {
   while (p != ',') { gameid = gameid + p; cin >> p; }
 
   cout << "GameID       : " << gameid << endl;
+  int pos = 0, val = 0;
+  for (string::iterator it = gameid.begin(); it != gameid.end(); it++) {
+    val = -1;
+    if ((*it >= 'a') && (*it <= 'z')) {
+      pos += *it - 'a';
+    }
+    if ((*it >= '1') && (*it <= '9')) {
+      val = atoi(&(*it));
+    }
+    if ((*it >= 'A') && (*it <= 'Z')) {
+      val = *it - 'A' + 10;
+    }
+    //cout << "(" << pos << ") " << *it;
+    if (val != -1) { 
+      //cout << " " << val;
+      b->set_square(pos, val);
+    }
+    //cout << endl;
+    pos++;
+  }
+  if (pos != (w * h)) {
+    cerr << "Format error: GameID string not long enough" << endl;
+    return 0;
+  }
   
-  cout << "Row counts   : ";
+  cout << "Column counts: ";
   for (int i=0; i<w; i++) {
     // try to read a number
     cin >> n;
@@ -45,7 +70,7 @@ Board* read_game() {
       cin >> n;
     }
     cout << n;
-    b->row_count[i] = n;
+    b->col_count[i] = n;
     cin >> p;
     if (p != ',') {
       cout << endl;
@@ -55,7 +80,7 @@ Board* read_game() {
   }
   cout << endl;
 
-  cout << "Column counts: ";
+  cout << "Row counts   : ";
   for (int i=0; i<h; i++) {
     cin >> n;
     if (cin.fail()) { 
@@ -69,7 +94,7 @@ Board* read_game() {
       cin >> n;
     }
     cout << n;
-    b->col_count[i] = n;
+    b->row_count[i] = n;
     if (i != h-1) {
       cin >> p;
       if (p != ',') {

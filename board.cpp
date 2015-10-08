@@ -70,9 +70,8 @@ Board::Board(int _w, int _h) {
 Board::~Board() {
   if (col_count != 0) { delete(col_count); }
   if (row_count != 0) { delete(row_count); }
-  if (squares != 0) {
-    //delete squares
-  }
+  // there's a malloc/free bug here
+  //if (squares != 0) { delete(squares); }
 }
 
 std::string Board::to_str() {
@@ -94,4 +93,12 @@ std::string Board::to_str() {
   }
 
   return rv.str();
+}
+
+bool Board::set_square(int idx, int value) {
+  return squares[idx].add_value(value);
+}
+
+bool Board::set_square(int x, int y, int value) {
+  return square_at(x,y)->add_value(value);
 }
