@@ -36,7 +36,9 @@ Board* read_game() {
       pos += *it - 'a';
     }
     if ((*it >= '1') && (*it <= '9')) {
-      val = atoi(&(*it));
+      // Prevent reading multiple numbers from it
+      char c = *it;
+      val = atoi(&c);
     }
     if ((*it >= 'A') && (*it <= 'Z')) {
       val = *it - 'A' + 10;
