@@ -6,6 +6,7 @@
 #include <iostream>
 #include <iomanip>
 #include <bitset>
+#include <list>
 #include <vector>
 #include <deque>
 #include <iterator>

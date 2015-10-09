@@ -38,6 +38,15 @@ Square::~Square() {
   }
 }
 
+std::string Square::state_to_sym(State st) {
+  switch(st) {
+    case Square::YES:  return "\u2022"; // "Y";
+    case Square::NO:   return " "; // "\u00d7"; // "N";
+    case Square::UNKN: return "\u25e6"; // "U";
+    default:           return "?";
+  }
+}
+
 std::string Square::state_to_str(State st) {
   switch(st) {
     case Square::YES:  return "Y";

@@ -38,6 +38,7 @@ public:
   Square();
   ~Square();
 
+  static std::string state_to_sym(State);
   static std::string state_to_str(State);
 
   std::string to_str();
