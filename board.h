@@ -29,6 +29,7 @@ private:
 
   bool solve_full_count();
   bool solve_forced_spaces();
+  bool solve_no_loops();
   bool solve_unreachable_spaces();
 
   static std::bitset<4> value_to_bitset(int);
