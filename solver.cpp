@@ -30,20 +30,18 @@ Board* read_game() {
 
   cout << "GameID       : " << gameid << endl;
   int pos = 0, val = 0;
-  for (string::iterator it = gameid.begin(); it != gameid.end(); it++) {
+  for (char &c : gameid) {
     val = -1;
-    if ((*it >= 'a') && (*it <= 'z')) {
-      pos += *it - 'a';
+    if ((c >= 'a') && (c <= 'z')) {
+      pos += c - 'a';
     }
-    if ((*it >= '1') && (*it <= '9')) {
-      // Prevent reading multiple numbers from it
-      char c = *it;
-      val = atoi(&c);
+    if ((c >= '1') && (c <= '9')) {
+      val = c - '0';
     }
-    if ((*it >= 'A') && (*it <= 'Z')) {
-      val = *it - 'A' + 10;
+    if ((c >= 'A') && (c <= 'Z')) {
+      val = c - 'A' + 10;
     }
-    //cout << "(" << pos << ") " << *it;
+    //cout << "(" << pos << ") " << c;
     if (val != -1) { 
       //cout << " " << val;
       b->set_square(pos, val);
