@@ -88,12 +88,12 @@ std::string Board::to_str() {
   if (row_count == 0) { return ""; }
   if (squares == 0) { return ""; }
 
-  for (x=0; x<wid; x++) { rv << std::setw(2) << col_count[x]; }
+  for (x=0; x<wid; x++) { rv << std::setw(1) << col_count[x]; }
   rv << std::endl;
   for (y=0; y<hgt; y++) {
-    rv << " ";
+    rv << "";
     for (x=0; x<wid; x++) {
-      rv << square_at(x,y)->to_str() << " ";
+      rv << square_at(x,y)->to_str() << "";
     }
     rv << row_count[y] << std::endl;
   }
@@ -114,7 +114,7 @@ void Board::inspect_all_squares() {
 
   std::cout << RED;
   for (i=0; i<wid; i++) {
-    std::cout << " " << col_count[i];
+    std::cout << std::setw(2) << col_count[i];
   }
   std::cout << WHITE << std::endl;
   i = 0;
