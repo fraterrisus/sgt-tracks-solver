@@ -300,23 +300,27 @@ bool Board::solve_full_count() {
   return changes;
 }
 
-void add_to_path(std::deque< Square* > *path, Square* sq) {
-  bool found = false;
-  for (auto p = path->begin(); p != path->end(); p++) {
-    if (*p == sq) { found = true; break; }
-  }
-  if (!found) { 
+bool Board::Path::contains_square(Square *sq) {
+  for (auto p = begin(); p != end(); p++) { if (*p == sq) { return true; } }
+  return false;
+}
+
+void Board::Path::add_square(Square* sq) {
+  if (! this->contains_square(sq)) {
     //std::cout << "      push " << std::hex << sq << std::endl;
-    path->push_back(sq); 
+    this->push_back(sq); 
   }
 }
 
-bool Board::solve_no_loops() {
+bool Board::squares_are_neighbors(Square *a, Square *b) {
+  if ((a->e == b) || (a->w == b) || (a->n == b) || (a->s == b)) return true;
+  return false;
+}
+
+std::list< Board::Path >* Board::find_all_paths() {
+  std::list< Board::Path > *paths = new std::list< Board::Path >;
   std::list< Square* > candidates;
   Square *rp, *sq;
-  bool changes = false;
-
-  std::cout << "solve_no_loops()" << std::endl;
 
   // Build list of candidates from Squares = YES
   for (rp = squares; rp != 0; rp = rp->s) {
@@ -330,8 +334,8 @@ bool Board::solve_no_loops() {
 
   while (!candidates.empty()) {
     // Take the next candidate and start a new Path
-    std::deque< Square* > path;
-    std::deque< Square* >::iterator p, q;
+    Board::Path path;
+    Board::Path::iterator p, q;
     //std::cout << "  new path" << std::endl;
 
     Square *x = candidates.front();
@@ -352,15 +356,26 @@ bool Board::solve_no_loops() {
       // we try to remove it multiple times, but if that's the case then we
       // already have a loop, which is a different problem.
       if ((sq->gap_n->state == Square::YES) && (sq->n != 0))
-      { candidates.remove(sq->n); add_to_path(&path, sq->n); }
+      { candidates.remove(sq->n); path.add_square(sq->n); }
       if ((sq->gap_s->state == Square::YES) && (sq->s != 0))
-      { candidates.remove(sq->s); add_to_path(&path, sq->s); }
+      { candidates.remove(sq->s); path.add_square(sq->s); }
       if ((sq->gap_e->state == Square::YES) && (sq->e != 0))
-      { candidates.remove(sq->e); add_to_path(&path, sq->e); }
+      { candidates.remove(sq->e); path.add_square(sq->e); }
       if ((sq->gap_w->state == Square::YES) && (sq->w != 0))
-      { candidates.remove(sq->w); add_to_path(&path, sq->w); }
+      { candidates.remove(sq->w); path.add_square(sq->w); }
     }
+    paths->push_back(path);
+  }
+  return paths;
+}
 
+bool Board::solve_no_loops() {
+  std::list< Board::Path > *paths = this->find_all_paths();
+  bool changes = false;
+
+  std::cout << "solve_no_loops()" << std::endl;
+
+  for (auto path: *paths) {
     // Given a Path, if any two Squares on that Path are adjacent but not along
     // the track, the Gap between them must be set to NO.
     //std::cout << "  run path" << std::endl;
@@ -369,25 +384,98 @@ bool Board::solve_no_loops() {
       auto j = i; j++;
       for (; j != path.end(); j++) {
         if (((*i)->s == *j) && ((*i)->gap_s->state == Square::UNKN)) { 
-          std::cout << "      S " << std::hex << *j << std::endl;
+          std::cout << std::hex << "  " << *i << " S " << *j << std::endl;
           (*i)->gap_s->state = Square::NO; 
           changes = true; 
         }
         if (((*i)->w == *j) && ((*i)->gap_w->state == Square::UNKN)) { 
-          std::cout << "      W " << std::hex << *j << std::endl;
+          std::cout << std::hex << "  " << *i << " W " << *j << std::endl;
           (*i)->gap_w->state = Square::NO; 
           changes = true; 
         }
         if (((*i)->n == *j) && ((*i)->gap_n->state == Square::UNKN)) { 
-          std::cout << "      N " << std::hex << *j << std::endl;
+          std::cout << std::hex << "  " << *i << " N " << *j << std::endl;
           (*i)->gap_n->state = Square::NO; 
           changes = true; 
         }
         if (((*i)->e == *j) && ((*i)->gap_e->state == Square::UNKN)) { 
-          std::cout << "      E " << std::hex << *j << std::endl;
+          std::cout << std::hex << "  " << *i << " E " << *j << std::endl;
           (*i)->gap_e->state = Square::NO; 
           changes = true; 
         }
+      }
+    }
+  }
+
+  return changes;
+}
+
+bool Board::solve_dont_join_ends() {
+  std::list< Board::Path > *paths = this->find_all_paths();
+  Square *start_sq, *end_sq, *sq, *ps;
+  Board::Path *start_path, *end_path;
+  bool changes = false;
+
+  // If there are only two paths, then they are the start and end paths, and
+  // they *should* be connected. So stop checking.
+  if (paths->size() == 2) { return false; }
+
+  std::cout << "solve_dont_join_ends()" << std::endl;
+
+  // Find the start and end squares. The start square is along the W border and
+  // the end square is along the S border, so we only need to iterate over
+  // those lines.
+  ps = 0;
+  for (sq = squares; sq != 0; sq = sq->s) {
+    ps = sq; // make sure we keep track of the SW-most square
+    if ((sq->get_state() == Square::YES) &&
+        (sq->gap_w->state == Square::YES))
+      start_sq = sq;
+  }
+  for (sq = ps; sq != 0; sq = sq->e) {
+    if ((sq->get_state() == Square::YES) &&
+        (sq->gap_s->state == Square::YES))
+      end_sq = sq;
+  }
+
+  // If we hadn't needed to count every path above, then we could more
+  // efficiently take the start and end square and perform path discovery on
+  // them in order to build the start and end paths. But we already have them,
+  // so instead let's just find them in the list of paths, even though that's
+  // way less optimal. (FIXME)
+  start_path = 0; end_path = 0;
+  for (auto it = paths->begin(); it != paths->end(); it++) {
+    if (it->contains_square(start_sq)) start_path = &(*it);
+    if (it->contains_square(end_sq)) end_path = &(*it);
+  }
+  if ((start_path == 0) || (end_path == 0)) {
+    std::cerr << "Error: couldn't find start or end path" << std::endl;
+    exit(1);
+  }
+
+  for (auto i: *start_path) {
+    for (auto j: *end_path) {
+      // if *sit and *eit are neighbors, set the gap to NO
+      // FIXME: refactor
+      if ((i->s == j) && (i->gap_s->state == Square::UNKN)) { 
+        std::cout << std::hex << "  " << i << " S " << j << std::endl;
+        i->gap_s->state = Square::NO; 
+        changes = true; 
+      }
+      if ((i->w == j) && (i->gap_w->state == Square::UNKN)) { 
+        std::cout << std::hex << "  " << i << " W " << j << std::endl;
+        i->gap_w->state = Square::NO; 
+        changes = true; 
+      }
+      if ((i->n == j) && (i->gap_n->state == Square::UNKN)) { 
+        std::cout << std::hex << "  " << i << " N " << j << std::endl;
+        i->gap_n->state = Square::NO; 
+        changes = true; 
+      }
+      if ((i->e == j) && (i->gap_e->state == Square::UNKN)) { 
+        std::cout << std::hex << "  " << i << " E " << j << std::endl;
+        i->gap_e->state = Square::NO; 
+        changes = true; 
       }
     }
   }
@@ -481,5 +569,6 @@ void Board::solve() {
     changes = changes || solve_full_count();
     changes = changes || solve_no_loops();
     changes = changes || solve_unreachable_spaces();
+    changes = changes || solve_dont_join_ends();
   }
 }

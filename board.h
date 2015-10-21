@@ -15,24 +15,38 @@
 
 class Board {
 
+// Types
+public:
+  class Path: public std::deque< Square* > {
+  public:
+    void add_square(Square*);
+    bool contains_square(Square*);
+  };
+
+// Members
 public:
   int *row_count, *col_count;
 private:
   int wid, hgt;
   Square *squares;
 
+// Methods
 private:
   int index_of(int, int);
   Square* square_at(int, int);
 
   void inspect_all_squares();
 
+  static std::bitset<4> value_to_bitset(int);
+
+  std::list< Path >* find_all_paths();
+  bool squares_are_neighbors(Square*, Square*);
+
   bool solve_full_count();
   bool solve_forced_spaces();
   bool solve_no_loops();
+  bool solve_dont_join_ends();
   bool solve_unreachable_spaces();
-
-  static std::bitset<4> value_to_bitset(int);
 
 public:
   Board();
