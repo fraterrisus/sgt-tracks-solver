@@ -3,12 +3,15 @@
 
 #include <sstream>
 #include <string>
+#include <cstring>
 #include <iostream>
 #include <iomanip>
+
 #include <bitset>
+#include <deque>
 #include <list>
 #include <vector>
-#include <deque>
+
 #include <iterator>
 
 #include "square.h"
@@ -26,21 +29,24 @@ public:
 // Members
 public:
   int *row_count, *col_count;
-private:
+protected:
   int wid, hgt;
+private:
   Square *squares;
 
 // Methods
 private:
   int index_of(int, int);
   Square* square_at(int, int);
+  void connect_grid();
 
   void inspect_all_squares();
 
   static std::bitset<4> value_to_bitset(int);
 
+  Path find_path(Square*);
   std::list< Path >* find_all_paths();
-  bool squares_are_neighbors(Square*, Square*);
+  bool ungap_neighbors(Square*, Square*);
 
   bool solve_full_count();
   bool solve_forced_spaces();
@@ -50,6 +56,7 @@ private:
 
 public:
   Board();
+  Board(Board&);
   Board(int, int);
   ~Board();
 
