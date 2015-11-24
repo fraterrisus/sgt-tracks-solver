@@ -1,6 +1,9 @@
-*.o
-*.so
-*.a
 *.swp
 *.swo
-solver
+log*
+cpp/solver
+cpp/*.o
+cpp/*.so
+cpp/*.a
+java/target
+java/.idea
