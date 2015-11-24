@@ -149,18 +149,18 @@ int main(int argc, char **argv) {
     return 1;
   }
   cout << board->to_str() << endl;
+  /*
   for (int i=0; i<3; i++) {
     Board *temp = new Board(*board);
     cout << temp->to_str() << endl;
   }
-  /*
+  */
   auto then = chrono::high_resolution_clock::now();
   board->solve();
   auto now = chrono::high_resolution_clock::now();
   long long elapsed_us = chrono::duration_cast<std::chrono::microseconds>(now - then).count();
   cout << board->to_str() << endl;
   cout << "Solving time: " << elapsed_us / 100000.0 << endl;
-  */
   delete(board);
   return 0;
 }
