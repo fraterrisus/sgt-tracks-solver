@@ -10,7 +10,11 @@ class Board
   // -------------------- Fields
   private int row_count[], col_count[];
   private int wid, hgt;
-  List<Square> squares;
+  private List<Square> squares;
+
+  // -------------------- Getters / Setters
+  public int getWidth() { return wid; }
+  public int getHeight() { return hgt; }
 
   // -------------------- Constructors / Factories
   public Board(int width, int height)
@@ -35,7 +39,7 @@ class Board
   public static Board getBoardFromGame(BufferedReader cin)
   {
     Pattern gamespec_pat = Pattern.compile("\\A(\\d+)x(\\d+)[^:]*:([^,]*),([0-9S,]*)\\z");
-    Matcher gamespec_mat = null;
+    Matcher gamespec_mat;
 
     try {
       gamespec_mat = gamespec_pat.matcher(cin.readLine());
@@ -65,7 +69,7 @@ class Board
     Board b = new Board(w,h);
 
     try {
-      List<Integer> icounts = new ArrayList<Integer>();
+      List<Integer> icounts = new ArrayList<>();
       Scanner s = new Scanner(counts).useDelimiter(",S?");
       while (s.hasNextInt()) icounts.add(s.nextInt());
       b.loadCounts(icounts);
@@ -88,19 +92,14 @@ class Board
     return b;
   }
 
-  // -------------------- Getters / Setters
-  public int getWidth() { return wid; }
-  public int getHeight() { return hgt; }
-
-  public Square getSquare(int x, int y)
-      throws IndexOutOfBoundsException
+  // -------------------- Private Methods
+  private Square getSquare(int x, int y)
   {
-    if ((x < 0) || (x >= wid)) { throw new IndexOutOfBoundsException(); }
-    if ((y < 0) || (y >= hgt)) { throw new IndexOutOfBoundsException(); }
+    assert((x >= 0) && (x < wid));
+    assert((y >= 0) && (y < hgt));
     return squares.get(x + (y * wid));
   }
 
-  // -------------------- Private Methods
   private void connectGrid()
   {
     // Establish N-S relationships
@@ -111,10 +110,10 @@ class Board
         Square.Gap gap = me.new Gap();
 
         me.setGap(Direction.S, gap);
-        me.setNeighbor(Direction.S, them);
+        me.setSquare(Direction.S, them);
 
         them.setGap(Direction.N, gap);
-        them.setNeighbor(Direction.N, me);
+        them.setSquare(Direction.N, me);
       }
     }
 
@@ -126,10 +125,10 @@ class Board
         Square.Gap gap = me.new Gap();
         
         me.setGap(Direction.E, gap);
-        me.setNeighbor(Direction.E, them);
+        me.setSquare(Direction.E, them);
 
         them.setGap(Direction.W, gap);
-        them.setNeighbor(Direction.W, me);
+        them.setSquare(Direction.W, me);
       }
     }
 
@@ -146,6 +145,9 @@ class Board
   }
 
   private void setEmptyBorderSquare(int x, int y, Direction n) {
+    assert((x >= 0) && (x < wid));
+    assert((y >= 0) && (y < hgt));
+
     Square me;
     Square.Gap gap;
 
@@ -158,8 +160,11 @@ class Board
   private void loadSquareState(String gameid)
       throws IndexOutOfBoundsException
   {
-    int pos=0, val=0;
+    assert ((gameid != null) && (gameid.length() > 0));
+
+    int pos=0, val;
     for (char c: gameid.toCharArray()) {
+      val = -1;
       System.out.print(pos + ":" + c);
       if ((c >= 'a') && (c <= 'z')) {
         int cpos = (int) c - (int) 'a';
@@ -175,6 +180,11 @@ class Board
         System.out.print(" val = " + val);
       }
       System.out.print("\n");
+      if (val != -1) {
+        Square square = squares.get(pos);
+        square.setState(State.YES);
+        square.setGapsState(Direction.intToSet(val), State.YES);
+      }
       pos++;
     }
     if (pos != wid * hgt) throw new IndexOutOfBoundsException("ended at " + pos);
@@ -183,6 +193,8 @@ class Board
   private void loadCounts(List<Integer> counts)
       throws IndexOutOfBoundsException
   {
+    assert ((counts != null) && (counts.size() > 0));
+
     ListIterator<Integer> it = counts.listIterator();
     for (int y=0; y<wid; y++) {
       if (!it.hasNext()) throw new IndexOutOfBoundsException(y + " columns needed");
