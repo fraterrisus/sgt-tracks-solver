@@ -8,7 +8,7 @@ import java.util.regex.Pattern;
 class Board 
 {
   // -------------------- Fields
-  private int row_count[], col_count[];
+  public int rowHints[], colHints[];
   private int wid, hgt;
   private List<Square> squares;
 
@@ -16,13 +16,29 @@ class Board
   public int getWidth() { return wid; }
   public int getHeight() { return hgt; }
 
+  /** Getter method for Squares, which should be referenced by X/Y coordinates.
+   * @param x
+   * @param y
+   * @return a Square object
+   * @throws IndexOutOfBoundsException
+   */
+  public Square getSquare(int x, int y)
+      throws IndexOutOfBoundsException
+  {
+    if ((x < 0) || (x >= wid))
+      throw new IndexOutOfBoundsException("Illegal value for x (" + x + ")");
+    if ((y < 0) || (y >= hgt))
+      throw new IndexOutOfBoundsException("Illegal value for y (" + y + ")");
+    return squares.get(x + (y * wid));
+  }
+
   // -------------------- Constructors / Factories
   public Board(int width, int height)
   {
     wid = width;
     hgt = height;
-    col_count = new int[wid];
-    row_count = new int[hgt];
+    colHints = new int[wid];
+    rowHints = new int[hgt];
     squares = new ArrayList<>();
 
     for (int i=0; i < wid*hgt; i++) {
@@ -93,68 +109,32 @@ class Board
   }
 
   // -------------------- Private Methods
-  private Square getSquare(int x, int y)
-  {
-    assert((x >= 0) && (x < wid));
-    assert((y >= 0) && (y < hgt));
-    return squares.get(x + (y * wid));
-  }
-
   private void connectGrid()
   {
     // Establish N-S relationships
     for (int y=0; y<hgt-1; y++) {
       for (int x=0; x<wid; x++) {
-        Square me = getSquare(x,y);
-        Square them = getSquare(x,y+1);
-        Square.Gap gap = me.new Gap();
-
-        me.setGap(Direction.S, gap);
-        me.setSquare(Direction.S, them);
-
-        them.setGap(Direction.N, gap);
-        them.setSquare(Direction.N, me);
+        getSquare(x,y).setSquare(Direction.S, getSquare(x,y+1));
       }
     }
 
     // Establish E-W relationships
     for (int x=0; x<wid-1; x++) {
       for (int y=0; y<hgt; y++) {
-        Square me = getSquare(x,y);
-        Square them = getSquare(x+1,y);
-        Square.Gap gap = me.new Gap();
-        
-        me.setGap(Direction.E, gap);
-        me.setSquare(Direction.E, them);
-
-        them.setGap(Direction.W, gap);
-        them.setSquare(Direction.W, me);
+        getSquare(x,y).setSquare(Direction.E, getSquare(x+1,y));
       }
     }
 
     // Manage border
     for (int x=0; x<wid; x++) {
-      setEmptyBorderSquare(x, 0, Direction.N);
-      setEmptyBorderSquare(x, hgt-1, Direction.S);
+      getSquare(x, 0).markBorder(Direction.N);
+      getSquare(x, hgt-1).markBorder(Direction.S);
     }
 
     for (int y=0; y<hgt; y++) {
-      setEmptyBorderSquare(0, y, Direction.W);
-      setEmptyBorderSquare(wid-1, y, Direction.E);
+      getSquare(0, y).markBorder(Direction.W);
+      getSquare(wid - 1, y).markBorder(Direction.E);
     }
-  }
-
-  private void setEmptyBorderSquare(int x, int y, Direction n) {
-    assert((x >= 0) && (x < wid));
-    assert((y >= 0) && (y < hgt));
-
-    Square me;
-    Square.Gap gap;
-
-    me = getSquare(x, y);
-    gap = me.new Gap();
-    gap.setState(State.NO);
-    me.setGap(n, gap);
   }
 
   private void loadSquareState(String gameid)
@@ -165,24 +145,23 @@ class Board
     int pos=0, val;
     for (char c: gameid.toCharArray()) {
       val = -1;
-      System.out.print(pos + ":" + c);
+      //System.out.print(pos + ":" + c);
       if ((c >= 'a') && (c <= 'z')) {
         int cpos = (int) c - (int) 'a';
-        System.out.print(" pos += " + cpos);
+        //System.out.print(" pos += " + cpos);
         pos += cpos;
       }
       if ((c >= '1') && (c <= '9')) {
         val = (int) c - (int) '0';
-        System.out.print(" val = " + val);
+        //System.out.print(" val = " + val);
       }
       if ((c >= 'A') && (c <= 'Z')) {
         val = (int) c - (int) 'A' + 10;
-        System.out.print(" val = " + val);
+        //System.out.print(" val = " + val);
       }
-      System.out.print("\n");
+      //System.out.print("\n");
       if (val != -1) {
         Square square = squares.get(pos);
-        square.setState(State.YES);
         square.setGapsState(Direction.intToSet(val), State.YES);
       }
       pos++;
@@ -198,11 +177,11 @@ class Board
     ListIterator<Integer> it = counts.listIterator();
     for (int y=0; y<wid; y++) {
       if (!it.hasNext()) throw new IndexOutOfBoundsException(y + " columns needed");
-      col_count[y] = it.next();
+      colHints[y] = it.next();
     }
     for (int x=0; x<wid; x++) {
       if (!it.hasNext()) throw new IndexOutOfBoundsException(x + " rows needed");
-      row_count[x] = it.next();
+      rowHints[x] = it.next();
     }
   }
 
@@ -213,18 +192,30 @@ class Board
     int x, y;
 
     for (x=0; x<wid; x++) {
-      sb.append(String.format("%2d", col_count[x]));
+      sb.append(String.format("%d", colHints[x]));
     }
     sb.append("\n");
     for (y=0; y<hgt; y++) {
-      sb.append(" ");
+      //sb.append(" ");
       for (x=0; x<wid; x++) {
         sb.append(getSquare(x,y).toString());
-        sb.append(" ");
+        //sb.append(" ");
       }
-      sb.append(row_count[y]);
+      sb.append(rowHints[y]);
       sb.append("\n");
     }
     return sb.toString();
+  }
+
+  public void solve() {
+    Set<SolvingStrategy> solvers = new HashSet<>();
+    solvers.add(FullCountSolver.getInstance());
+
+    boolean changes = true;
+    while (changes) {
+      changes = false;
+      solvers.stream().anyMatch(s -> s.solve(this));
+      System.out.println(this);
+    }
   }
 }

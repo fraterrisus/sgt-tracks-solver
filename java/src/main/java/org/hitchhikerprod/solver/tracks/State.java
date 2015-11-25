@@ -1,22 +1,13 @@
 package org.hitchhikerprod.solver.tracks;
 
 public enum State 
-{ 
-  UNKN {
-    char toChar() { return 'U'; }
-    char toGlyph() { return '\u25e6'; }
-  },
+{
+  UNKN ('U', '\u25e6'),
+  YES  ('Y', '\u2022'),
+  NO   ('N', ' ');
 
-  YES {
-    char toChar() { return 'Y'; }
-    char toGlyph() { return '\u2022'; }
-  },
-
-  NO {
-    char toChar() { return 'N'; }
-    char toGlyph() { return ' '; }
-  };
-
-  abstract char toChar();
-  abstract char toGlyph();
+  private final char ascii, glyph;
+  State(char ascii, char glyph) { this.ascii = ascii; this.glyph = glyph; }
+  public char toChar() { return this.ascii; }
+  public char toGlyph() { return this.glyph; }
 }
